@@ -51,78 +51,129 @@ class _NoteListState extends State<NoteList> {
             Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => NoteModify()))
                 .then((_) {
-                  _fetchNotes();
-                });
+              _fetchNotes();
+            });
           },
           child: const Icon(Icons.note_add),
         ),
-        body: Builder(
-          builder: (_) {
-            if (_isLoading) {
-              return Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor,));
-            }
-
-            if (_apiResponse.error) {
-              return Center(child: Text(_apiResponse.errorMessage!));
-            }
-
-            return ListView.separated(
-              separatorBuilder: (_, __) =>
-                  Divider(height: 1, color: Theme.of(context).primaryColor ),
-              itemBuilder: (context, index) {
-                return Dismissible(
-                  key: ValueKey(_apiResponse.data![index].noteID),
-                  direction: DismissDirection.startToEnd,
-                  onDismissed: (direction) {},
-                  confirmDismiss: (direction) async {
-                    final result = await showDialog(
-                        context: context, builder: (_) => NoteDelete());
-
-                    
-                    if (result) {
-                      final deleteResult = await service.deleteNote(_apiResponse.data![index].noteID!);
-                      var message = '';
-
-                      if (deleteResult.data == true) {
-                        message = 'The note was deleted successfully';
-                      } else {
-                        message = deleteResult.errorMessage ?? 'An error occrued';
-                      }
-                      Scaffold.of(context).showSnackBar(SnackBar(content: Text(message),duration: const Duration(milliseconds: 1000)));
-
-                      return deleteResult.data ?? false;
-                    } 
-                    print(result);
-                    return result;
-                  },
-                  background: Container(
-                    color: Colors.red,
-                    padding: const EdgeInsets.only(left: 16),
-                    child: const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Icon(Icons.delete, color: Colors.white),
-                    ),
-                  ),
-                  child: ListTile(
-                    title: Text(
-                      _apiResponse.data![index].noteTitle!,
-                      style: TextStyle(color: Theme.of(context).primaryColor),
-                    ),
-                    subtitle: Text(
-                        'Last edited on ${formatDateTime(_apiResponse.data![index].latestEditDateTime!)}'),
-                    onTap: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => NoteModify(
-                              noteID: _apiResponse.data![index].noteID!))).then((data) {
-                                _fetchNotes();
-                              });
-                    },
-                  ),
-                );
-              },
-              itemCount: _apiResponse.data!.length,
-            );
+        body: RefreshIndicator(
+          onRefresh: () async {
+            _fetchNotes();
           },
+          child: Builder(
+            builder: (_) {
+              if (_isLoading) {
+                return Center(
+                    child: CircularProgressIndicator(
+                  color: Theme.of(context).primaryColor,
+                ));
+              }
+
+              if (_apiResponse.error) {
+                return Center(child: Text(_apiResponse.errorMessage!));
+              }
+
+              if (_apiResponse.data!.isEmpty) {
+                return Center(
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 15),
+                          child: Text('No Notes in the API',
+                              textAlign: TextAlign.center,
+                              softWrap: true,
+                              style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontSize: 35)),
+                        ),
+                        const SizedBox(height: 35),
+                        Icon(
+                          Icons.nights_stay,
+                          color: Theme.of(context).primaryColor,
+                          size: 150,
+                        ),
+                        const SizedBox(height: 35),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 45),
+                          child: Text(
+                            'Click the Floating Button to create a new note',
+                            softWrap: true,
+                            style: TextStyle(
+                                color: Theme.of(context).primaryColor,
+                                fontSize: 18),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ]),
+                );
+              }
+
+              return ListView.separated(
+                separatorBuilder: (_, __) =>
+                    Divider(height: .5, color: Theme.of(context).primaryColor),
+                itemBuilder: (context, index) {
+                  return Dismissible(
+                    key: ValueKey(_apiResponse.data![index].noteID),
+                    direction: DismissDirection.startToEnd,
+                    onDismissed: (direction) {},
+                    confirmDismiss: (direction) async {
+                      final result = await showDialog(
+                          context: context, builder: (_) => NoteDelete());
+
+                      if (result) {
+                        final deleteResult = await service
+                            .deleteNote(_apiResponse.data![index].noteID!);
+                        var message = '';
+
+                        if (deleteResult.data == true) {
+                          message = 'The note was deleted successfully';
+                        } else {
+                          message =
+                              deleteResult.errorMessage ?? 'An error occrued';
+                        }
+                        Scaffold.of(context).showSnackBar(SnackBar(
+                            content: Text(message),
+                            duration: const Duration(milliseconds: 1000)));
+
+                        return deleteResult.data ?? false;
+                      }
+
+                      print(result);
+                      return result;
+                    },
+                    background: Container(
+                      color: Colors.red,
+                      padding: const EdgeInsets.only(left: 16),
+                      child: const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Icon(Icons.delete, color: Colors.white),
+                      ),
+                    ),
+                    child: ListTile(
+                      title: Text(
+                        '🗒 ${_apiResponse.data![index].noteTitle!}',
+                        style: TextStyle(color: Theme.of(context).primaryColor),
+                      ),
+                      subtitle: Text(
+                          '• ✏ Last edited on ${formatDateTime(_apiResponse.data![index].latestEditDateTime ?? _apiResponse.data![index].createDateTime!)}'),
+                      onLongPress: () {
+                        Navigator.of(context)
+                            .push(MaterialPageRoute(
+                                builder: (_) => NoteModify(
+                                    noteID: _apiResponse.data![index].noteID!)))
+                            .then((data) {
+                          _fetchNotes();
+                        });
+                      },
+                    ),
+                  );
+                },
+                itemCount: _apiResponse.data!.length,
+              );
+            },
+          ),
         ));
   }
 }
