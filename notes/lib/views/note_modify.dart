@@ -53,7 +53,7 @@ class _NoteModifyState extends State<NoteModify> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(isEditing ? 'Edit note' : 'Create note')),
+      appBar: AppBar(title: Text(isEditing ? 'Update note' : 'Create note')),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: _isLoading
